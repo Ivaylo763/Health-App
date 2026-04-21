@@ -7,7 +7,7 @@ import numpy as np
 HARMFUL_LIST = [
     "E102", "E110", "E120", "E124", "E127", 
     "E129", "E133", "E150", "E211", "E250", 
-    "E621", "E951", "ASPARTAME", "MSG"
+    "E621", "E951", "ASPARTAME", "MSG", "КОНСЕРВАНТИ"
 ]
 
 def process_image(image):
