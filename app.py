@@ -1,6 +1,3 @@
-import streamlit as st
-bad_ingredients = ["Е102", "Тартразин", "Tartrazine", ", "Sunset Yellow", , "Cochineal", , "Sulfur dioxide",  "Sodium nitrite", "Е621", "Мононатриев глутамат", "Monosodium glutamate", "Е951", "Аспартам", "Aspartame" ]
-
 
 import streamlit as st
 import easyocr
