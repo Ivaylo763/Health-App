@@ -3,53 +3,62 @@ import easyocr
 from PIL import Image
 import numpy as np
 
-# 1. Списък с вредни съставки (можеш лесно да добавяш нови тук)
+# 1. Списък с вредни съставки
 HARMFUL_LIST = [
-    "E102", "E110", "E120", "E124", "E127", 
-    "E129", "E133", "E150", "E211", "E250", 
+    "E102", "E110", "E120", "E121", "E122", "E123", "E124", "E127", 
+    "E129", "E131", "E132", "E133", "E142", "E150", "E151", "E153",
+    "E154", "E155", "E173", "E174", "E175", "E180", "E211", "E250", 
     "E621", "E951", "ASPARTAME", "MSG"
 ]
 
+# Функция за разпознаване на текст (кешираме я, за да не зарежда модела всеки път)
+@st.cache_resource
+def load_reader():
+    return easyocr.Reader(['bg', 'en'])
+
 def process_image(image):
-    # Инициализиране на EasyOCR
-    reader = easyocr.Reader(['bg', 'en'])
+    reader = load_reader()
     img_array = np.array(image)
-    # Извличаме само текста и го обединяваме в един низ
     results = reader.readtext(img_array, detail=0)
     return " ".join(results).upper()
 
 # --- Streamlit Интерфейс ---
-st.set_page_config(page_title="Е-Скенер", page_icon="🚫")
-st.title("🧪 Проверка за вредни Е-номера")
+st.set_page_config(page_title="Е-Скенер", page_icon="📸")
+st.title("📸 Скенер за вредни съставки")
 
-uploaded_file = st.file_uploader("Качете снимка на етикет", type=["jpg", "jpeg", "png"])
+# Избор на метод за вход
+option = st.radio("Изберете метод:", ("Снимка от камерата", "Качване на файл"))
 
-if uploaded_file is not None:
-    image = Image.open(uploaded_file)
-    st.image(image, caption='Качено изображение', use_container_width=True)
+image_file = None
+
+if option == "Снимка от камерата":
+    image_file = st.camera_input("Направете снимка на етикета")
+else:
+    image_file = st.file_uploader("Изберете снимка от устройството", type=["jpg", "jpeg", "png"])
+
+if image_file is not None:
+    image = Image.open(image_file)
     
-    with st.spinner('Сканиране на съставките...'):
+    # Показваме снимката (само ако е качен файл, камерата сама показва преглед)
+    if option == "Качване на файл":
+        st.image(image, caption='Качено изображение', use_container_width=True)
+    
+    with st.spinner('Анализиране на съставките...'):
         try:
-            # Извличане на текста от снимката
             extracted_text = process_image(image)
             
-            st.subheader("Разпознати съставки:")
-            st.write(extracted_text)
+            st.subheader("Разпознат текст:")
+            st.info(extracted_text)
             
-            # Проверка чрез списъка
-            found_ingredients = []
-            for item in HARMFUL_LIST:
-                if item in extracted_text:
-                    found_ingredients.append(item)
+            # Търсене в списъка
+            found_ingredients = [item for item in HARMFUL_LIST if item in extracted_text]
             
             st.divider()
             
-            # Показване на резултата
             if found_ingredients:
-                st.error(f"⚠️ ВНИМАНИЕ! Открити вредни съставки: {', '.join(found_ingredients)}")
-                st.info("Препоръчително е да избягвате продукти с тези добавки.")
+                st.error(f"⚠️ ВНИМАНИЕ! Открити вредни съставки: **{', '.join(found_ingredients)}**")
             else:
-                st.success("✅ Не бяха открити съставки от списъка с вредни вещества.")
+                st.success("✅ Не бяха открити съставки от черния списък.")
                 
         except Exception as e:
             st.error(f"Грешка при обработката: {e}")
