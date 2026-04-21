@@ -1,68 +1,55 @@
-
-
 import streamlit as st
 import easyocr
 from PIL import Image
 import numpy as np
 
-# 1. Речник с примери за вредни съставки (Е-номера)
-# Можете да го разширите с реални данни
-HARMFUL_INGREDIENTS = {
-    "E102": "Тартразин (Оцветител) - Може да причини хиперактивност.",
-    "Е110": "Сънсет Йелоу.",
-    "Е120": "Кошенил.",
-    "E129": "Алура червено (Оцветител) - Потенциален алерген.",
-    "E211": "Натриев бензоат (Консервант) - Вреден при комбинация с Витамин С.",
-    "Е220": "Серен диоксид",
-    "Е250": "Натриев нитрит",
-    "E621": "Мононатриев глутамат (Овкусител) - Може да причини главоболие.",
-    "E951": "Аспартам (Подсладител) - Изкуствен подсладител, спорен за здравето."
-}
+# 1. Списък с вредни съставки (можеш лесно да добавяш нови тук)
+HARMFUL_LIST = [
+    "E102", "E110", "E120", "E124", "E127", 
+    "E129", "E133", "E150", "E211", "E250", 
+    "E621", "E951", "ASPARTAME", "MSG"
+]
 
 def process_image(image):
-    # Инициализиране на EasyOCR (за Български и Английски)
+    # Инициализиране на EasyOCR
     reader = easyocr.Reader(['bg', 'en'])
-    
-    # Превръщане на изображението в подходящ формат
     img_array = np.array(image)
-    
-    # Извличане на текста
+    # Извличаме само текста и го обединяваме в един низ
     results = reader.readtext(img_array, detail=0)
     return " ".join(results).upper()
 
-# --- Интерфейс на Streamlit ---
-st.set_page_config(page_title="Детектор на вредни съставки", page_icon="🧪")
-st.title("🔍 Скенер за вредни съставки (E-номера)")
-st.write("Качете снимка на етикета със съдържанието на продукта.")
+# --- Streamlit Интерфейс ---
+st.set_page_config(page_title="Е-Скенер", page_icon="🚫")
+st.title("🧪 Проверка за вредни Е-номера")
 
-uploaded_file = st.file_uploader("Изберете снимка...", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader("Качете снимка на етикет", type=["jpg", "jpeg", "png"])
 
 if uploaded_file is not None:
     image = Image.open(uploaded_file)
-    st.image(image, caption='Качена снимка', use_container_width=True)
+    st.image(image, caption='Качено изображение', use_container_width=True)
     
-    with st.spinner('Анализиране на текста... моля изчакайте.'):
+    with st.spinner('Сканиране на съставките...'):
         try:
-            # 2. OCR разпознаване
+            # Извличане на текста от снимката
             extracted_text = process_image(image)
             
-            st.subheader("Разпознат текст:")
-            st.info(extracted_text)
+            st.subheader("Разпознати съставки:")
+            st.write(extracted_text)
             
-            # 3. Проверка за вредни съставки
-            found_harmful = []
-            for code, description in HARMFUL_INGREDIENTS.items():
-                if code in extracted_text:
-                    found_harmful.append((code, description))
+            # Проверка чрез списъка
+            found_ingredients = []
+            for item in HARMFUL_LIST:
+                if item in extracted_text:
+                    found_ingredients.append(item)
             
-            # 4. Показване на резултатите
             st.divider()
-            if found_harmful:
-                st.error(f"⚠️ Внимание! Открити са {len(found_harmful)} потенциално вредни съставки:")
-                for code, desc in found_harmful:
-                    st.warning(f"**{code}**: {desc}")
+            
+            # Показване на резултата
+            if found_ingredients:
+                st.error(f"⚠️ ВНИМАНИЕ! Открити вредни съставки: {', '.join(found_ingredients)}")
+                st.info("Препоръчително е да избягвате продукти с тези добавки.")
             else:
-                st.success("✅ Не са открити познати вредни Е-номера в текста.")
+                st.success("✅ Не бяха открити съставки от списъка с вредни вещества.")
                 
         except Exception as e:
-            st.error(f"Възникна грешка при обработката: {e}")
+            st.error(f"Грешка при обработката: {e}")
