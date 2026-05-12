@@ -1,67 +1,125 @@
+# app.py
+
 import streamlit as st
-import easyocr
 from PIL import Image
 import numpy as np
+import easyocr
+import re
 
-# Cache the OCR model (IMPORTANT 🚀)
+# =========================
+# Конфигурация
+# =========================
+
+st.set_page_config(
+    page_title="Food Ingredient Scanner",
+    layout="centered"
+)
+
+st.title("🧾 OCR Scanner за вредни съставки")
+st.write(
+    "Качи снимка на етикет с продукти. "
+    "Приложението ще разпознае текста и ще открие потенциално вредни съставки."
+)
+
+# =========================
+# EasyOCR Reader
+# =========================
+
 @st.cache_resource
 def load_reader():
     return easyocr.Reader(['bg', 'en'])
 
 reader = load_reader()
 
-# List of harmful ingredients
-HARMFUL_LIST = [
-    "E102", "E110", "E120", "E124", "E127",
-    "E129", "E133", "E150", "E211", "E250",
-    "E621", "E951", "ASPARTAME", "MSG", "КОНСЕРВАНТИ"
-]
+# =========================
+# Списък с вредни съставки
+# =========================
 
-def normalize_text(text):
-    # Normalize text to catch variations like "e 102", "e-102"
-    text = text.upper()
-    text = text.replace("-", "").replace(" ", "")
-    return text
+harmful_ingredients = {
+    "e621": "Мононатриев глутамат (MSG)",
+    "msg": "Мононатриев глутамат (MSG)",
+    "палмово масло": "Палмово масло",
+    "palm oil": "Palm Oil",
+    "аспартам": "Aspartame",
+    "aspartame": "Aspartame",
+    "e950": "Ацесулфам K",
+    "e951": "Aspartame",
+    "e952": "Cyclamate",
+    "e954": "Saccharin",
+    "e955": "Sucralose",
+    "e211": "Sodium Benzoate",
+    "натриев бензоат": "Sodium Benzoate",
+    "e102": "Tartrazine",
+    "e110": "Sunset Yellow",
+    "e124": "Ponceau 4R",
+    "e129": "Allura Red",
+    "хидрогенирани мазнини": "Hydrogenated fats",
+    "hydrogenated": "Hydrogenated fats",
+}
 
-def process_image(image):
-    img_array = np.array(image)
-    results = reader.readtext(img_array, detail=0)
-    return " ".join(results)
+# =========================
+# Upload
+# =========================
 
-# --- Streamlit UI ---
-st.set_page_config(page_title="Е-Скенер", page_icon="🚫")
-st.title("🧪 Проверка за вредни Е-номера")
-
-uploaded_file = st.file_uploader("Качете снимка на етикет", type=["jpg", "jpeg", "png"])
+uploaded_file = st.file_uploader(
+    "Качи снимка",
+    type=["jpg", "jpeg", "png"]
+)
 
 if uploaded_file is not None:
+
     image = Image.open(uploaded_file)
 
-    # FIXED (new Streamlit style)
-    st.image(image, caption='Качено изображение', width="stretch")
+    st.image(image, caption="Качена снимка", use_container_width=True)
 
-    with st.spinner('Сканиране на съставките...'):
-        try:
-            extracted_text = process_image(image)
-            normalized_text = normalize_text(extracted_text)
+    # =========================
+    # OCR
+    # =========================
 
-            st.subheader("Разпознати съставки:")
-            st.write(extracted_text)
+    with st.spinner("Разпознаване на текст..."):
 
-            found_ingredients = []
-            for item in HARMFUL_LIST:
-                if normalize_text(item) in normalized_text:
-                    found_ingredients.append(item)
+        img_array = np.array(image)
 
-            st.divider()
+        results = reader.readtext(img_array)
 
-            if found_ingredients:
-                st.error(
-                    f"⚠️ ВНИМАНИЕ! Открити вредни съставки: {', '.join(found_ingredients)}"
-                )
-                st.info("Препоръчително е да избягвате продукти с тези добавки.")
-            else:
-                st.success("✅ Не бяха открити съставки от списъка с вредни вещества.")
+        extracted_text = " ".join([res[1] for res in results])
 
-        except Exception as e:
-            st.error(f"Грешка при обработката: {e}")
+    st.subheader("📄 Разпознат текст")
+
+    st.text_area(
+        "OCR резултат",
+        extracted_text,
+        height=250
+    )
+
+    # =========================
+    # Търсене на съставки
+    # =========================
+
+    st.subheader("⚠️ Намерени потенциално вредни съставки")
+
+    found = []
+
+    text_lower = extracted_text.lower()
+
+    for ingredient, description in harmful_ingredients.items():
+
+        pattern = r'\b' + re.escape(ingredient.lower()) + r'\b'
+
+        if re.search(pattern, text_lower):
+            found.append((ingredient, description))
+
+    if found:
+
+        for ingredient, description in found:
+            st.error(f"{ingredient.upper()} → {description}")
+
+    else:
+        st.success("Не са открити вредни съставки.")
+
+# =========================
+# Footer
+# =========================
+
+st.markdown("---")
+st.caption("EasyOCR + Streamlit + Python")
