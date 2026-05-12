@@ -3,63 +3,50 @@ import easyocr
 from PIL import Image
 import numpy as np
 
-# Списък с вредни съставки (може да бъде разширен)
-HARMFUL_INGREDIENTS = {
-    "bg": ["E621", "мононатриев глутамат", "палмово масло", "хидрогенирани мазнини", "аспартам", "E951", "E211", "натриев бензоат"],
-    "en": ["E621", "MSG", "monosodium glutamate", "palm oil", "hydrogenated fat", "aspartame", "E951", "E211", "sodium benzoate"]
-}
-
-st.set_page_config(page_title="Скенер за съставки", page_icon="🔍")
+# Зареждаме и кешираме OCR модела, за да не заема памет при всяко обновяване
+@st.cache_resource
+def load_model():
+    # 'bg' за български, 'en' за английски
+    return easyocr.Reader(['bg', 'en'], gpu=False)
 
 def main():
-    st.title("🔍 Скенер за вредни съставки")
-    st.write("Качете снимка на етикета със съдържанието, за да проверите за опасни добавки.")
+    st.set_page_config(page_title="Health Scanner", page_icon="🥗")
+    st.title("🥗 Скенер за вредни съставки")
+    st.write("Качете снимка на етикет, за да проверим за вредни добавки.")
 
-    # Избор на език за OCR
-    lang_option = st.selectbox(
-        "Изберете език на етикета:",
-        ("Български + Английски", "Само Английски")
-    )
+    # Списък за проверка
+    HARMFUL = [
+        "E621", "MSG", "monosodium glutamate", "мононатриев глутамат", 
+        "палмово масло", "palm oil", "аспартам", "aspartame", 
+        "хидрогенирани мазнини", "hydrogenated fat"
+    ]
+
+    reader = load_model()
     
-    reader_langs = ['bg', 'en'] if lang_option == "Български + Английски" else ['en']
-
-    uploaded_file = st.file_uploader("Изберете снимка...", type=["jpg", "jpeg", "png"])
+    uploaded_file = st.file_uploader("Изберете изображение...", type=["jpg", "png", "jpeg"])
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
-        st.image(image, caption='Качена снимка', use_container_width=True)
+        # Показваме снимката (новата версия на командата е с 'width')
+        st.image(image, caption="Вашият етикет", width=500)
         
-        with st.spinner('Разпознаване на текст... Моля изчакайте.'):
-            # Инициализация на EasyOCR
-            reader = easyocr.Reader(reader_langs, gpu=False) # Сменете на True, ако имате GPU
-            
-            # Конвертиране на PIL изображението в numpy array за EasyOCR
-            image_np = np.array(image)
-            results = reader.readtext(image_np, detail=0)
-            
+        with st.spinner('Анализиране на текста... Моля изчакайте.'):
+            # Конвертиране за OCR
+            img_np = np.array(image)
+            results = reader.readtext(img_np, detail=0)
             full_text = " ".join(results).lower()
-            
-        st.subheader("Разпознат текст:")
-        st.write(full_text)
 
-        # Проверка за вредни съставки
-        found_harmful = []
-        all_checks = HARMFUL_INGREDIENTS["bg"] + HARMFUL_INGREDIENTS["en"]
+        st.subheader("Резултати от анализа:")
         
-        for ingredient in all_checks:
-            if ingredient.lower() in full_text:
-                if ingredient not in found_harmful:
-                    found_harmful.append(ingredient)
+        found = [item for item in HARMFUL if item.lower() in full_text]
 
-        st.divider()
-
-        # Показване на резултатите
-        if found_harmful:
-            st.error(f"⚠️ Внимание! Открити са потенциално вредни съставки:")
-            for item in found_harmful:
-                st.write(f"- **{item}**")
+        if found:
+            st.error(f"⚠️ Внимание! Открити съставки: {', '.join(found)}")
         else:
-            st.success("✅ Не са открити съставки от черния списък.")
+            st.success("✅ Не са открити опасни съставки от списъка.")
+            
+        with st.expander("Виж разпознатия текст"):
+            st.write(full_text)
 
 if __name__ == "__main__":
     main()
