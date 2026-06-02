@@ -18,7 +18,7 @@ def main():
     HARMFUL = [
         "E621", "MSG", "monosodium glutamate", "мононатриев глутамат", 
         "палмово масло", "palm oil", "аспартам", "aspartame", 
-        "хидрогенирани мазнини", "hydrogenated fat"
+        "хидрогенирани мазнини", "hydrogenated fat", "preservatives", "Guarana extract"
     ]
 
     reader = load_model()
