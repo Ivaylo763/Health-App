@@ -25,7 +25,7 @@ def main():
         "Caramel Color",
         "Phosphoric Acid",
         "Natural Flavors",
-        "Caffeine"
+        "CAFFEINE"
     ]
 
     reader = load_model()
