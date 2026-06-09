@@ -20,7 +20,12 @@ def main():
         "палмово масло", "palm oil", "аспартам", "aspartame", 
         "хидрогенирани мазнини", "hydrogenated fat", "preservatives", "Guarana extract",  "E102", "E104", "E110","E122","E123", "E124", "E127", "E129", "E150C", "E150D",
         "E171", "E211", "E220",  "E221", "E222",  "E223",  "E224", "E228", "E249",  "E250", "E251",  "E252",  "E320",  "E321", "E407",  "E621",  "E950", "E951",  "E952", 
-        "E954", "E955", "E999"
+        "E954", "E955", "E999", "Carbonated Water",
+        "High Fructose Corn Syrup",
+        "Caramel Color",
+        "Phosphoric Acid",
+        "Natural Flavors",
+        "Caffeine"
     ]
 
     reader = load_model()
